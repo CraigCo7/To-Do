@@ -1,61 +1,62 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { GoogleSignInButton } from "./authButtons";
 
-export const LoginForm = () => {
-	const [username, setUsername] = useState("");
-	const [password, setPassword] = useState("");
+type CredentialFormProps = {
+	csrfToken?: string;
+};
 
-	const checking = async () => {};
+export function LoginForm(props: CredentialFormProps) {
+	const router = useRouter();
+	const [error, setError] = useState<string | null>(null);
 
 	const handleFormSubmit = async (e: any) => {
 		e.preventDefault();
 
-		try {
-			const response = await fetch("/api/login", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ username, password }),
-			});
+		const data = new FormData(e.currentTarget);
 
-			console.log("WHY NOT");
+		//credentials is the type of signin provider, which we added in lib/auth.tsx
+		const signInResponse = await signIn("credentials", {
+			email: data.get("email"),
+			password: data.get("password"),
+			redirect: false,
+		});
 
-			if (response.ok) {
-				const data = await response.json();
-				console.log("SUCCESS");
-				console.log(data.message); // Log the response message
-				// You can also redirect the user or perform other actions here.
-			} else {
-				console.error("Login failed");
-				alert("Account Not Found.");
-			}
-		} catch (error) {
-			console.log("WHY WHY WHY WHY");
-			console.error("Error:", error);
-			alert("FAILED 2");
+		if (signInResponse && !signInResponse.error) {
+			router.push("/dashboard");
+		} else {
+			console.log("ERROR", signInResponse);
+			setError("Email or Password is incorrect.");
 		}
 	};
 
 	return (
 		<body className="bg-gray-100 flex items-center justify-center h-screen">
 			<div className="bg-white p-8 rounded shadow-md w-80">
-				<form action="api/login" method="POST" onSubmit={handleFormSubmit}>
+				<form onSubmit={handleFormSubmit}>
+					{error && (
+						<span className="p-4 mb-2 text-lg font-semibold text-black bg-red-500 rounded-md">
+							{error}
+						</span>
+					)}
 					<div className="mb-4">
 						<label
 							className="block text-gray-700 font-bold mb-2"
-							htmlFor="username"
+							htmlFor="email"
 						>
-							Username:
+							Email:
 						</label>
 						<input
 							className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:border-blue-300 text-black"
-							type="text"
-							id="username"
-							name="username"
-							placeholder="Enter your username"
+							type="email"
+							id="email"
+							name="email"
+							autoComplete="username"
+							placeholder="Enter your email"
+							required
 						/>
 					</div>
 					<div className="mb-4">
@@ -71,6 +72,7 @@ export const LoginForm = () => {
 							id="password"
 							name="password"
 							placeholder="Enter your password"
+							required
 						/>
 					</div>
 					<button
@@ -80,10 +82,11 @@ export const LoginForm = () => {
 						Login
 					</button>
 				</form>
+				<GoogleSignInButton />
 			</div>
 		</body>
 	);
-};
+}
 
 export const LoginPage = () => {
 	return (
